@@ -3,6 +3,8 @@ package main
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"github.com/alexflint/go-arg"
 	"github.com/pkg/errors"
@@ -16,7 +18,7 @@ import (
 
 var (
 	version string
-	commit string
+	commit  string
 )
 
 type args struct {
@@ -40,7 +42,11 @@ func main() {
 	}
 
 	log.Printf("Retrieving %s", args.From)
-	resp, err := http.Get(args.From)
+	client, err := setupHttpClient()
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp, err := client.Get(args.From)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -56,6 +62,26 @@ func main() {
 	} else {
 		log.Fatalf("Failed to retrieve archive: %s", resp.Status)
 	}
+}
+
+func setupHttpClient() (*http.Client, error) {
+	certPool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, err
+	}
+	for _, pem := range extraCerts {
+		if !certPool.AppendCertsFromPEM([]byte(pem)) {
+			return nil, errors.New("Unable to add Github CA cert")
+		}
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{RootCAs: certPool},
+		},
+	}
+
+	return client, nil
 }
 
 func processTarGz(reader io.Reader, file string, to string) (string, error) {
