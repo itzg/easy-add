@@ -1,5 +1,9 @@
 A utility for easily adding a file from a downloaded archive during Docker builds
 
+## Usage
+
+Run the binary with `--help` to view the usage documentation.
+
 ## Example usage within `Dockerfile`
 
 ```

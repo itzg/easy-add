@@ -21,10 +21,13 @@ var (
 	commit  string
 )
 
+const DefaultTo = "/usr/local/bin"
+
 type args struct {
-	From string `arg:"required"`
-	File string `arg:"required"`
-	To   string
+	From   string `arg:"required"`
+	File   string `arg:"required"`
+	To     string
+	Mkdirs bool `help:"Attempt to create the directory path specified by --to"`
 }
 
 func (args) Version() string {
@@ -33,7 +36,7 @@ func (args) Version() string {
 
 func main() {
 	var args args
-	args.To = "/usr/bin"
+	args.To = DefaultTo
 
 	arg.MustParse(&args)
 
@@ -41,7 +44,14 @@ func main() {
 		log.Fatal("Only supports processing tar-gzipped files with tar.gz or tgz suffix")
 	}
 
-	log.Printf("Retrieving %s", args.From)
+	if args.Mkdirs {
+		err := os.MkdirAll(args.To, 0755)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	log.Printf("I! Retrieving %s", args.From)
 	client, err := setupHttpClient()
 	if err != nil {
 		log.Fatal(err)
@@ -56,18 +66,19 @@ func main() {
 	if resp.StatusCode == 200 {
 		outFilePath, err := processTarGz(resp.Body, args.File, args.To)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("E! %v", err)
 		}
-		log.Printf("Extracted file to %s", outFilePath)
+		log.Printf("I! Extracted file to %s", outFilePath)
 	} else {
-		log.Fatalf("Failed to retrieve archive: %s", resp.Status)
+		log.Fatalf("E! Failed to retrieve archive: %s", resp.Status)
 	}
 }
 
 func setupHttpClient() (*http.Client, error) {
 	certPool, err := x509.SystemCertPool()
 	if err != nil {
-		return nil, err
+		log.Printf("W! %v", err)
+		certPool = x509.NewCertPool()
 	}
 	for _, pem := range extraCerts {
 		if !certPool.AppendCertsFromPEM([]byte(pem)) {
