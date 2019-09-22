@@ -40,6 +40,8 @@ func main() {
 
 	arg.MustParse(&args)
 
+	log.SetOutput(os.Stdout)
+
 	if !isTarGz(args.From) {
 		log.Fatal("Only supports processing tar-gzipped files with tar.gz or tgz suffix")
 	}
