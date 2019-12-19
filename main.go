@@ -5,10 +5,10 @@ import (
 	"compress/gzip"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/itzg/go-flagsfiller"
-	"github.com/pkg/errors"
 	"io"
 	"log"
 	"net/http"
@@ -109,14 +109,14 @@ func processTarGz(reader io.Reader, file string, to string) (string, error) {
 
 	gzipReader, err := gzip.NewReader(reader)
 	if err != nil {
-		return "", errors.Wrap(err, "Failed to read gzip content")
+		return "", fmt.Errorf("failed to read gzip content: %w", err)
 	}
 
 	tarReader := tar.NewReader(gzipReader)
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
-			return "", errors.New("Unable to find requested file in archive")
+			return "", errors.New("unable to find requested file in archive")
 		}
 
 		if header.Name == file {
@@ -130,14 +130,14 @@ func extractExe(reader io.Reader, filename string, to string, fileInfo os.FileIn
 
 	file, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE, fileInfo.Mode())
 	if err != nil {
-		return "", errors.Wrap(err, "Unable to create destination file")
+		return "", fmt.Errorf("unable to create destination file: %w", err)
 	}
 	//noinspection GoUnhandledErrorResult
 	defer file.Close()
 
 	_, err = io.Copy(file, reader)
 	if err != nil {
-		return "", errors.Wrap(err, "Unable to copy extracted file content")
+		return "", fmt.Errorf("unable to copy extracted file content: %w", err)
 	}
 
 	return outPath, nil
