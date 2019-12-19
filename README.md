@@ -2,7 +2,20 @@ A utility for easily adding a file from a downloaded archive during Docker build
 
 ## Usage
 
-Run the binary with `--help` to view the usage documentation.
+Running the binary with `--help` can be used to obtain usage at any time.
+
+```
+  -file path
+    	The path to executable to extract within archive
+  -from URL
+    	URL of a tar.gz archive to download
+  -mkdirs
+    	Attempt to create the directory path specified by to
+  -to path
+    	The path where executable will be placed (default "/usr/local/bin")
+  -version
+    	Show version and exit
+```
 
 ## Example usage within `Dockerfile`
 

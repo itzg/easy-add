@@ -5,8 +5,9 @@ import (
 	"compress/gzip"
 	"crypto/tls"
 	"crypto/x509"
+	"flag"
 	"fmt"
-	"github.com/alexflint/go-arg"
+	"github.com/itzg/go-flagsfiller"
 	"github.com/pkg/errors"
 	"io"
 	"log"
@@ -21,24 +22,31 @@ var (
 	commit  string
 )
 
-const DefaultTo = "/usr/local/bin"
-
-type args struct {
-	From   string `arg:"required"`
-	File   string `arg:"required"`
-	To     string
-	Mkdirs bool `help:"Attempt to create the directory path specified by --to"`
-}
-
-func (args) Version() string {
-	return fmt.Sprintf("easy-add %s (%s)", version, commit)
+var args struct {
+	From    string `usage:"[URL] of a tar.gz archive to download"`
+	File    string `usage:"The [path] to executable to extract within archive"`
+	To      string `usage:"The [path] where executable will be placed" default:"/usr/local/bin"`
+	Mkdirs  bool   `usage:"Attempt to create the directory path specified by to"`
+	Version bool   `usage:"Show version and exit"`
 }
 
 func main() {
-	var args args
-	args.To = DefaultTo
 
-	arg.MustParse(&args)
+	err := flagsfiller.Parse(&args)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if args.Version {
+		fmt.Printf("version=%s, commit=%s\n", version, commit)
+		return
+	}
+
+	if args.From == "" || args.File == "" {
+		_, _ = fmt.Fprintln(flag.CommandLine.Output(), "from and file are required")
+		flag.Usage()
+		os.Exit(2)
+	}
 
 	log.SetOutput(os.Stdout)
 
