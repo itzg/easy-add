@@ -1,3 +1,5 @@
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/itzg/easy-add)](https://github.com/itzg/easy-add/releases/latest)
+
 A utility for easily adding a file from a downloaded archive during Docker builds
 
 ## Usage
