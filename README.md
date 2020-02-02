@@ -10,13 +10,24 @@ Running the binary with `--help` can be used to obtain usage at any time.
   -file path
     	The path to executable to extract within archive
   -from URL
-    	URL of a tar.gz archive to download
+    	URL of a tar.gz archive to download. May contain Go template references to 'var' entries.
   -mkdirs
     	Attempt to create the directory path specified by to
   -to path
     	The path where executable will be placed (default "/usr/local/bin")
+  -var name=value
+    	Sets variables that can be referenced in 'from'. Format is name=value (default os=linux,arch=amd64)
   -version
     	Show version and exit
+```
+
+## Template variables in `from`
+
+The `from` argument is process as a Go template with `var` as the context. For example, repetition in the URL can be simplified such as:
+
+```
+--var version=1.2.0 \
+--from https://github.com/itzg/restify/releases/download/{{.version}}/restify_{{.version}}_{{.os}}_{{.arch}}.tar.gz
 ```
 
 ## Example usage within `Dockerfile`

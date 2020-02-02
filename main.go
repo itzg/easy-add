@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"crypto/tls"
 	"crypto/x509"
@@ -9,28 +10,39 @@ import (
 	"flag"
 	"fmt"
 	"github.com/itzg/go-flagsfiller"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path"
+	"runtime"
 	"strings"
 )
 
 var (
-	version string
-	commit  string
+	version = "0.0.0"
+	commit  = "HEAD"
+	// Should be set by goreleaser ldflags -X main.arch={{.Arch}}{{ if .Arm }}v{{ .Arm }}{{ end }}
+	// Can't use just runtime.GOARCH since it is just "arm" for both v6 and v7 variants.
+	arch = "amd64"
 )
 
 var args struct {
-	From    string `usage:"[URL] of a tar.gz archive to download"`
-	File    string `usage:"The [path] to executable to extract within archive"`
-	To      string `usage:"The [path] where executable will be placed" default:"/usr/local/bin"`
-	Mkdirs  bool   `usage:"Attempt to create the directory path specified by to"`
-	Version bool   `usage:"Show version and exit"`
+	From    string            `usage:"[URL] of a tar.gz archive to download. May contain Go template references to 'var' entries."`
+	Var     map[string]string `usage:"Sets variables that can be referenced in 'from'. Format is [name=value]"`
+	File    string            `usage:"The [path] to executable to extract within archive"`
+	To      string            `usage:"The [path] where executable will be placed" default:"/usr/local/bin"`
+	Mkdirs  bool              `usage:"Attempt to create the directory path specified by to"`
+	Version bool              `usage:"Show version and exit"`
 }
 
 func main() {
+
+	args.Var = map[string]string{
+		"arch": arch,
+		"os":   runtime.GOOS,
+	}
 
 	err := flagsfiller.Parse(&args)
 	if err != nil {
@@ -50,7 +62,12 @@ func main() {
 
 	log.SetOutput(os.Stdout)
 
-	if !isTarGz(args.From) {
+	from, err := evaluateFromTemplate(args.From, args.Var)
+	if err != nil {
+		log.Fatalf("failed to evaluate 'from': %s", err)
+	}
+
+	if !isTarGz(from) {
 		log.Fatal("Only supports processing tar-gzipped files with tar.gz or tgz suffix")
 	}
 
@@ -61,12 +78,12 @@ func main() {
 		}
 	}
 
-	log.Printf("I! Retrieving %s", args.From)
+	log.Printf("I! Retrieving %s", from)
 	client, err := setupHttpClient()
 	if err != nil {
 		log.Fatal(err)
 	}
-	resp, err := client.Get(args.From)
+	resp, err := client.Get(from)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,6 +99,21 @@ func main() {
 	} else {
 		log.Fatalf("E! Failed to retrieve archive: %s", resp.Status)
 	}
+}
+
+func evaluateFromTemplate(fromTemplate string, vars map[string]string) (string, error) {
+	tmpl, err := template.New("from").Parse(fromTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, vars)
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
 func setupHttpClient() (*http.Client, error) {
