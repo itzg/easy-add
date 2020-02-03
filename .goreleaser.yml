@@ -18,7 +18,7 @@ builds:
     - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.arch={{.Arch}}{{ if .Arm }}v{{ .Arm }}{{ end }}
 archives:
 - format: binary
-  name_template: "{{ .Os }}/{{ .Arch }}{{ if .Arm }}/v{{ .Arm }}{{ end }}/{{ .Binary }}"
+  name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}_v{{ .Arm }}{{ end }}"
 checksum:
   name_template: 'checksums.txt'
 snapshot:
