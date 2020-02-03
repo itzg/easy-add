@@ -1,35 +1,24 @@
-version: 2
+version: 2.1
 
-defaults: &defaults
-  docker:
-    - image: circleci/golang:1.13
+orbs:
+  go: circleci/go@0.2.0
 
 jobs:
   build:
-    <<: *defaults
+    executor: &execWithGo
+      name: go/default
+      tag: 1.13
     steps:
       - checkout
-
-      - restore_cache:
-          keys:
-            - cache-{{ arch }}-{{ checksum "go.sum" }}
-
-      - run: go test
-
-      - save_cache:
-          key: cache-{{ arch }}-{{ checksum "go.sum" }}
-          paths:
-            - /go/pkg
+      - go/load-cache
+      - go/test
+      - go/save-cache
 
   release:
-    <<: *defaults
+    <<: *execWithGo
     steps:
       - checkout
-
-      - setup_remote_docker
-      - run:
-          name: docker login
-          command: echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin
+      - go/load-cache
       - run:
           name: goreleaser
           command: curl -sL https://git.io/goreleaser | bash
