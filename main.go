@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/tar"
-	"bufio"
 	"bytes"
 	"compress/gzip"
 	"crypto/tls"
@@ -17,7 +16,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"runtime"
 	"strings"
 )
 
@@ -36,11 +34,6 @@ var args struct {
 }
 
 func main() {
-
-	args.Var = map[string]string{
-		"arch": computeArch(),
-		"os":   runtime.GOOS,
-	}
 
 	err := flagsfiller.Parse(&args)
 	if err != nil {
@@ -96,39 +89,6 @@ func main() {
 		log.Printf("I! Extracted file to %s", outFilePath)
 	} else {
 		log.Fatalf("E! Failed to retrieve archive: %s", resp.Status)
-	}
-}
-
-func computeArch() string {
-	switch runtime.GOARCH {
-	case "arm":
-		// we have to look harder with arm since GOARM is not available at runtime
-		cpuinfo, err := os.Open("/proc/cpuinfo")
-		if err != nil {
-			log.Fatalf("E! Failed to read cpuinfo: %s", err)
-		}
-		defer cpuinfo.Close()
-
-		s := bufio.NewScanner(cpuinfo)
-		for s.Scan() {
-			line := s.Text()
-			if strings.HasPrefix(line, "CPU architecture") {
-				parts := strings.Split(line, ":")
-				switch strings.TrimSpace(parts[1]) {
-				case "7":
-					return "armv7"
-				case "6":
-					return "armv6"
-				default:
-					log.Fatalf("E! Unknown ARM CPU architecture: %s", parts[1])
-				}
-			}
-		}
-		log.Fatalf("E! Unable to locate CPU architecture")
-		return "UNKNOWN"
-
-	default:
-		return runtime.GOARCH
 	}
 }
 
