@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"crypto/tls"
@@ -23,9 +24,6 @@ import (
 var (
 	version = "0.0.0"
 	commit  = "HEAD"
-	// Should be set by goreleaser ldflags -X main.arch={{.Arch}}{{ if .Arm }}v{{ .Arm }}{{ end }}
-	// Can't use just runtime.GOARCH since it is just "arm" for both v6 and v7 variants.
-	arch = "amd64"
 )
 
 var args struct {
@@ -40,7 +38,7 @@ var args struct {
 func main() {
 
 	args.Var = map[string]string{
-		"arch": arch,
+		"arch": computeArch(),
 		"os":   runtime.GOOS,
 	}
 
@@ -98,6 +96,39 @@ func main() {
 		log.Printf("I! Extracted file to %s", outFilePath)
 	} else {
 		log.Fatalf("E! Failed to retrieve archive: %s", resp.Status)
+	}
+}
+
+func computeArch() string {
+	switch runtime.GOARCH {
+	case "arm":
+		// we have to look harder with arm since GOARM is not available at runtime
+		cpuinfo, err := os.Open("/proc/cpuinfo")
+		if err != nil {
+			log.Fatalf("E! Failed to read cpuinfo: %s", err)
+		}
+		defer cpuinfo.Close()
+
+		s := bufio.NewScanner(cpuinfo)
+		for s.Scan() {
+			line := s.Text()
+			if strings.HasPrefix(line, "CPU architecture") {
+				parts := strings.Split(line, ":")
+				switch strings.TrimSpace(parts[1]) {
+				case "7":
+					return "armv7"
+				case "6":
+					return "armv6"
+				default:
+					log.Fatalf("E! Unknown ARM CPU architecture: %s", parts[1])
+				}
+			}
+		}
+		log.Fatalf("E! Unable to locate CPU architecture")
+		return "UNKNOWN"
+
+	default:
+		return runtime.GOARCH
 	}
 }
 
