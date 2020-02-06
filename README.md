@@ -35,23 +35,23 @@ The `from` argument is process as a Go template with `var` as the context. For e
 ```
 FROM ubuntu
 
-ARG EASY_ADD_VER=0.5.1
+ARG EASY_ADD_VER=0.5.3
 ADD https://github.com/itzg/easy-add/releases/download/${EASY_ADD_VER}/easy-add_${EASY_ADD_VER}_linux_amd64 /usr/bin/easy-add
 RUN chmod +x /usr/bin/easy-add
 
-RUN easy-add --var version=1.2.0 --var app=restify --file restify --from https://github.com/itzg/{{.app}}/releases/download/{{.version}}/{{.app}}_{{.version}}_{{.os}}_{{.arch}}.tar.gz
+RUN easy-add --var version=1.2.0 --var app=restify --file restify --from https://github.com/itzg/{{.app}}/releases/download/{{.version}}/{{.app}}_{{.version}}_linux_amd64.tar.gz
 ```
 
-## `Dockerfile` usage with buildx and multi-arch builds
+## `Dockerfile` usage with BuildKit and multi-arch builds
 
 ```
-# hook into docker buildx --platform support
-# see https://github.com/docker/buildx/#---platformvaluevalue
-ARG TARGETPLATFORM=linux/amd64
+# hook into docker BuildKit --platform support
+# see https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+ARG TARGETVARIANT=""
 
-ARG EASY_ADD_VER=0.5.1
-ADD "https://easy-add-downloader.now.sh/api/download?version=${EASY_ADD_VER}&platform=${TARGETPLATFORM}" /usr/bin/easy-add
+ARG EASY_ADD_VER=0.5.3
+ADD https://github.com/itzg/easy-add/releases/download/${EASY_ADD_VER}/easy-add_${TARGETOS}_${TARGETARCH}${TARGETVARIANT} /usr/bin/easy-add
 RUN chmod +x /usr/bin/easy-add
-
-RUN easy-add --var version=1.2.0 --var app=restify --file restify --from https://github.com/itzg/{{.app}}/releases/download/{{.version}}/{{.app}}_{{.version}}_{{.os}}_{{.arch}}.tar.gz
 ```
