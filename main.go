@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"crypto/tls"
@@ -12,6 +13,7 @@ import (
 	"github.com/itzg/go-flagsfiller"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -25,13 +27,20 @@ var (
 )
 
 var args struct {
-	From    string            `usage:"[URL] of a tar.gz archive to download. May contain Go template references to 'var' entries."`
+	From    string            `usage:"[URL] of a tar.gz or zip archive to download. May contain Go template references to 'var' entries."`
 	Var     map[string]string `usage:"Sets variables that can be referenced in 'from'. Format is [name=value]"`
 	File    string            `usage:"The [path] to executable to extract within archive"`
 	To      string            `usage:"The [path] where executable will be placed" default:"/usr/local/bin"`
 	Mkdirs  bool              `usage:"Attempt to create the directory path specified by to"`
 	Version bool              `usage:"Show version and exit"`
 }
+
+type ArchiveType int
+
+const(
+	TarGz ArchiveType = iota
+	Zip
+)
 
 func main() {
 
@@ -58,8 +67,9 @@ func main() {
 		log.Fatalf("failed to evaluate 'from': %s", err)
 	}
 
-	if !isTarGz(from) {
-		log.Fatal("Only supports processing tar-gzipped files with tar.gz or tgz suffix")
+	archiveType, err := getArchiveType(from)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	if args.Mkdirs {
@@ -82,7 +92,7 @@ func main() {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 200 {
-		outFilePath, err := processTarGz(resp.Body, args.File, args.To)
+		outFilePath, err := processArchive(archiveType, resp.Body, args.File, args.To)
 		if err != nil {
 			log.Fatalf("E! %v", err)
 		}
@@ -128,8 +138,49 @@ func setupHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-func processTarGz(reader io.Reader, file string, to string) (string, error) {
+func processArchive(t ArchiveType, reader io.Reader, file string, to string) (string, error) {
+	switch t {
+	case TarGz:
+		return processTarGz(reader, file, to)
+	case Zip:
+		return processZip(reader, file, to)
+	default:
+		return "", errors.New("invalid archive type")
+	}
+}
 
+func processZip(reader io.Reader, file string, to string) (string, error) {
+	body, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return "", fmt.Errorf("failed to read: %w", err)
+	}
+
+	zipReader, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
+	if err != nil {
+		return "", fmt.Errorf("failed to read zip content: %w", err)
+	}
+
+	for _, zipFile := range zipReader.File {
+		if zipFile.Name == file {
+			return extractExeFromZip(zipFile, file, to, zipFile.FileInfo())
+		}
+	}
+
+	return "", errors.New("unable to find requested file in archive")
+}
+
+func extractExeFromZip(file *zip.File, filename string, to string, fileInfo os.FileInfo) (string, error) {
+	r, err := file.Open()
+	if err != nil {
+		return "", fmt.Errorf("unable to open zip file: %w", err)
+	}
+	//noinspection GoUnhandledErrorResult
+	defer r.Close()
+
+	return extractExe(r, filename, to, fileInfo)
+}
+
+func processTarGz(reader io.Reader, file string, to string) (string, error) {
 	gzipReader, err := gzip.NewReader(reader)
 	if err != nil {
 		return "", fmt.Errorf("failed to read gzip content: %w", err)
@@ -166,7 +217,13 @@ func extractExe(reader io.Reader, filename string, to string, fileInfo os.FileIn
 	return outPath, nil
 }
 
-func isTarGz(url string) bool {
+func getArchiveType(url string) (ArchiveType, error) {
 	url = strings.ToLower(url)
-	return strings.HasSuffix(url, ".tar.gz") || strings.HasSuffix(url, ".tgz")
+	if strings.HasSuffix(url, ".tar.gz") || strings.HasSuffix(url, ".tgz") {
+		return TarGz, nil
+	} else if strings.HasSuffix(url, ".zip") {
+		return Zip, nil
+	} else {
+		return -1, errors.New("only supports processing archives tar-gzipped files with tar.gz or tgz suffix, or zipped files with zip suffix")
+	}
 }
