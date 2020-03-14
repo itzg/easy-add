@@ -28,8 +28,8 @@ var (
 
 var args struct {
 	From    string            `usage:"[URL] of a tar.gz or zip archive to download. May contain Go template references to 'var' entries."`
-	Var     map[string]string `usage:"Sets variables that can be referenced in 'from'. Format is [name=value]"`
-	File    string            `usage:"The [path] to executable to extract within archive"`
+	Var     map[string]string `usage:"Sets variables that can be referenced in 'from' and 'file'. Format is [name=value]"`
+	File    string            `usage:"The [path] to executable to extract within archive. May contain Go template references to 'var' entries."`
 	To      string            `usage:"The [path] where executable will be placed" default:"/usr/local/bin"`
 	Mkdirs  bool              `usage:"Attempt to create the directory path specified by to"`
 	Version bool              `usage:"Show version and exit"`
@@ -67,6 +67,11 @@ func main() {
 		log.Fatalf("failed to evaluate 'from': %s", err)
 	}
 
+	file, err := evaluateFromTemplate(args.File, args.Var)
+	if err != nil {
+		log.Fatalf("failed to evaluate 'file': %s", err)
+	}
+
 	archiveType, err := getArchiveType(from)
 	if err != nil {
 		log.Fatal(err)
@@ -92,7 +97,7 @@ func main() {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 200 {
-		outFilePath, err := processArchive(archiveType, resp.Body, args.File, args.To)
+		outFilePath, err := processArchive(archiveType, resp.Body, file, args.To)
 		if err != nil {
 			log.Fatalf("E! %v", err)
 		}
