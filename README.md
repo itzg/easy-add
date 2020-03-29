@@ -56,3 +56,12 @@ ARG EASY_ADD_VER=0.5.3
 ADD https://github.com/itzg/easy-add/releases/download/${EASY_ADD_VER}/easy-add_${TARGETOS}_${TARGETARCH}${TARGETVARIANT} /usr/bin/easy-add
 RUN chmod +x /usr/bin/easy-add
 ```
+
+## Alternative when adding only a single archived-binary
+
+easy-add is somewhat overkill adding only a single archived-binary to a Docker image. The following is an alternative solution that doesn't require curl to be installed in the image:
+
+```
+ADD https://github.com/itzg/rcon-cli/releases/download/1.4.7/rcon-cli_1.4.7_linux_amd64.tar.gz /tmp/rcon-cli.tgz
+RUN tar -xf /tmp/rcon-cli.tgz -C /usr/local/bin rcon-cli && rm /tmp/rcon-cli.tgz
+```
