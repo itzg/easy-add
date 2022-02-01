@@ -1,5 +1,4 @@
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/itzg/easy-add)](https://github.com/itzg/easy-add/releases/latest)
-[![CircleCI](https://img.shields.io/circleci/build/github/itzg/easy-add)](https://app.circleci.com/pipelines/github/itzg/easy-add)
 
 A utility for easily adding a file from a downloaded archive during Docker builds
 
