@@ -4,11 +4,14 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      updates:
+        patterns:
+          - "*"
+        update-types:
+          - patch
+          - minor
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
-  - package-ecosystem: docker
-    directory: /
-    schedule:
-      interval: monthly
