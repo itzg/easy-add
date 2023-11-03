@@ -11,7 +11,7 @@ builds:
     - arm
     - arm64
   goarm:
-    - 7
+    - "7"
 archives:
 - format: binary
   name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
