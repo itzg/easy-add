@@ -37,7 +37,7 @@ var args struct {
 
 type ArchiveType int
 
-const(
+const (
 	TarGz ArchiveType = iota
 	Zip
 )
@@ -207,7 +207,7 @@ func processTarGz(reader io.Reader, file string, to string) (string, error) {
 func extractExe(reader io.Reader, filename string, to string, fileInfo os.FileInfo) (string, error) {
 	outPath := path.Join(to, path.Base(filename))
 
-	file, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE, fileInfo.Mode())
+	file, err := os.OpenFile(outPath, os.O_WRONLY|os.O_CREATE, 0755)
 	if err != nil {
 		return "", fmt.Errorf("unable to create destination file: %w", err)
 	}
