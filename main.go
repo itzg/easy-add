@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -71,6 +72,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to evaluate 'file': %s", err)
 	}
+	file = filepath.Clean(file)
 
 	archiveType, err := getArchiveType(from)
 	if err != nil {
@@ -166,7 +168,7 @@ func processZip(reader io.Reader, file string, to string) (string, error) {
 	}
 
 	for _, zipFile := range zipReader.File {
-		if zipFile.Name == file {
+		if filepath.Clean(zipFile.Name) == file {
 			return extractExeFromZip(zipFile, file, to, zipFile.FileInfo())
 		}
 	}
@@ -198,7 +200,7 @@ func processTarGz(reader io.Reader, file string, to string) (string, error) {
 			return "", errors.New("unable to find requested file in archive")
 		}
 
-		if header.Name == file {
+		if filepath.Clean(header.Name) == file {
 			return extractExe(tarReader, file, to, header.FileInfo())
 		}
 	}
