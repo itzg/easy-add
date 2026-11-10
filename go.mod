@@ -1,6 +1,6 @@
 module easy-add
 
-go 1.27.3
+go 1.27.4
 
 require github.com/itzg/go-flagsfiller v1.19.0
 
